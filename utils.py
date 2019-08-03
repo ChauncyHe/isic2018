@@ -16,7 +16,9 @@ from sklearn.svm import SVC
 
 # Define ISIC Dataset Class
 class ISICDataset(Dataset):
-    """ISIC dataset."""
+    """
+    ISIC dataset.
+    """
 
     def __init__(self, mdlParams, indSet):
         """
@@ -31,7 +33,7 @@ class ISICDataset(Dataset):
         self.balancing = mdlParams['balance_classes']
         self.subtract_set_mean = mdlParams['subtract_set_mean']
         self.same_sized_crop = mdlParams['same_sized_crops']  
-        self.train_eval_state = mdlParams['trainSetState']   
+        self.train_eval_state = mdlParams['trainSetState']   c
         # Potential setMean to deduce from channels
         self.setMean = mdlParams['setMean'].astype(np.float32)
         # Current indSet = 'trainInd'/'valInd'/'testInd'
