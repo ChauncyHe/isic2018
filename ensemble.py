@@ -1,42 +1,45 @@
 import numpy as np
-import pickle
-import re
+import pickle #将数据序列化以保存
+import re #正则化
 import os
 import sys
-import itertools
-from glob import glob
-from sklearn.metrics import confusion_matrix, f1_score, auc, roc_curve
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
-from joblib import Parallel, delayed
-import multiprocessing
-import copy
+import itertools #迭代工具
+from glob import glob #文件路径查找
+from sklearn.metrics import confusion_matrix, f1_score, auc, roc_curve #混淆矩阵，F1-Score,AUC，ROC曲线
+from sklearn.ensemble import RandomForestClassifier #随机森林分类器
+from sklearn.svm import SVC 
+from joblib import Parallel, delayed # job.Parallel用于平行计算, joblib.delayed用于查询函数的全部参数
+import multiprocessing #多进程处理库
+import copy #复制模块
 
 
 # Just assume fixed CV size for ensemble with evaluation
-cvSize = 5
-numClasses = 7
+# 为了评估集成，而假设固定的交叉验证尺寸
+cvSize = 5 #交叉验证折数
+numClasses = 7 #分类类别数
 
 # First argument is folder, filled with CV results files
+# 第一个参数是包含交叉验证结果文件的文件夹
 all_preds_path = sys.argv[1]
 
 # Second argument indicates, whether we are only generating predictions or actually evaluating performance on something
+# 第二个参数表明，是否只产生预测或者评估效果
 if 'eval' in sys.argv[2]:
     evaluate = True
     # Determin if vote or average is used
     if 'vote' in sys.argv[2]:
-        evaluate_method = 'vote'
+        evaluate_method = 'vote' #评估方式为投票
     else:
-        evaluate_method = 'average'
+        evaluate_method = 'average' #评估方式为平均
     # Determine if exhaustive combination search or ordered search is used
     if 'exhaust' in sys.argv[2]:
-        exhaustive_search = True
+        exhaustive_search = True #详尽搜索模式
         num_top_models = [int(s) for s in re.findall(r'\d+',sys.argv[2])][-1]
     else:
         exhaustive_search = False
     # Third argument indicates where subset should be saved
     if 'subSet' in sys.argv[3]:
-        subSetPath = sys.argv[3]
+        subSetPath = sys.argv[3] #第三个参数，子集保存路径
     else:
         subSetPath = None
 else:
@@ -49,23 +52,35 @@ else:
     if 'meta' in sys.argv[2]:
         acceptedList.append('meta')                
     # Third argument indicates whether some subset should be used
-    if 'subSet' in sys.argv[3]:
+    if 'subSet' in sys.argv[3]: 
         # Load subset file
         with open(sys.argv[3],'rb') as f:
-            subSetDict = pickle.load(f)       
+            subSetDict = pickle.load(f) #加载子集文件字典   
         subSet = subSetDict['subSet']
     else:
         subSet = None    
 
 # Fourth argument indicates csv path to save final results into
 if len(sys.argv) > 4 and 'csvFile' in sys.argv[4]:
-    csvPath = sys.argv[4]
-    origFilePath = sys.argv[5]
+    csvPath = sys.argv[4] #CSV文件保存路径
+    origFilePath = sys.argv[5] #原始文件路径
 else:
     csvPath = None
 
-# Function to get some metrics back
+
 def get_metrics(predictions,targets):
+    """
+     返回一些需要用到的度量
+     Args:
+        predictions: 预测值
+        targets: 目标值
+     Return:
+        ACC:精确度
+        F1: F1-Score
+        WACC:
+        ROC_AUC:
+    """
+    
     # Calculate metrics
     # Accuarcy
     acc = np.mean(np.equal(np.argmax(predictions,1),np.argmax(targets,1)))
@@ -92,9 +107,10 @@ def get_metrics(predictions,targets):
     return acc, f1, wacc, roc_auc
 
 # If its actual evaluation, evaluate each CV indipendently, show results both for each CV set and all of them together
+# 独立评估每一次交叉验证
 if evaluate:
     # Go through all files
-    files = sorted(glob(all_preds_path+'/*'))
+    files = sorted(glob(all_preds_path+'/*')) #查找路径下所有文件，返回文件绝对路径的列表(os.listdir()只返回文件名列表)
     # Because of unkown prediction size, dont use matrix
     final_preds = {}
     final_targets = {}
@@ -104,14 +120,14 @@ if evaluate:
     firstLoaded = False
     for j in range(len(files)):
         # Skip if it is a directory
-        if os.path.isdir(files[j]):
+        if os.path.isdir(files[j]): #如果是文件夹
             continue
         # Skip if not a pkl file
-        if '.pkl' not in files[j]:
+        if '.pkl' not in files[j]: #预测文件夹中没有pickle的文件.pkl
             print("Remove non-pkl files")
             break
         # Load file
-        with open(files[j],'rb') as f:
+        with open(files[j],'rb') as f: #加载.pkl文件
             allDataCurr = pickle.load(f)    
         # Get predictions
         if not firstLoaded:
